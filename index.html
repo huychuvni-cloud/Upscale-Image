@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Upscaler Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; }
+        
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+        input[type=range]:focus { outline: none; }
+
+        /* Hide scrollbar for settings panel */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Comparison Slider Styles */
+        .comparison-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            cursor: col-resize;
+            background-color: #1e293b;
+        }
+        .comparison-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .comparison-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%; /* Initial position */
+            height: 100%;
+            overflow: hidden;
+            border-right: 2px solid white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+        }
+        .comparison-overlay img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%; /* Important: Must match 100 / overlay_width */
+            height: 100%;
+            object-fit: contain;
+            max-width: none;
+        }
+        .slider-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .slider-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background-color: white;
+            transform: translateX(-50%);
+            z-index: 9;
+            pointer-events: none;
+        }
+        .badge-before { position: absolute; top: 10px; left: 10px; z-index: 20; }
+        .badge-after { position: absolute; top: 10px; right: 10px; z-index: 20; }
+        
+        /* Pro Badge Glow */
+        .pro-glow { animation: glow 2s infinite alternate; }
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #0ea5e9, 0 0 10px #0ea5e9; }
+            to { box-shadow: 0 0 10px #38bdf8, 0 0 20px #38bdf8; }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation -->
+    <header class="bg-dark-900 border-b border-slate-800 h-16 flex items-center justify-between px-6 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">AI</div>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-purple-400">UpscalePro</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="text-slate-400 hover:text-white transition-colors text-sm">Hướng dẫn API</button>
+            <button id="proBtn" class="pro-glow bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition-all">Get Pro</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Settings -->
+        <aside class="w-80 bg-dark-900 border-r border-slate-800 flex flex-col shrink-0">
+            <div class="p-5 flex-1 overflow-y-auto no-scrollbar">
+                
+                <!-- Upload Area -->
+                <div class="mb-6">
+                    <h2 class="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Hình ảnh đầu vào</h2>
+                    <div id="dropZone" class="border-2 border-dashed border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-slate-800/50 transition-all text-center">
+                        <svg class="w-10 h-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <p class="text-sm font-medium text-slate-200">Kéo thả ảnh vào đây</p>
+                        <p class="text-xs text-slate-500 mt-1">hoặc click để chọn file (Max 5MB)</p>
+                        <input type="file" id="fileInput" class="hidden" accept="image/jpeg, image/png, image/webp">
+                    </div>
+                    <!-- Mini preview of selected file -->
+                    <div id="fileInfo" class="mt-3 hidden bg-slate-800 p-2 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <div class="w-8 h-8 bg-slate-700 rounded shrink-0 overflow-hidden" id="miniPreviewContainer"></div>
+                            <span id="fileName" class="text-xs text-slate-300 truncate">filename.jpg</span>
+                        </div>
+                        <button id="removeFileBtn" class="text-slate-500 hover:text-red-400 p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AI Model Selection -->
+                <div class="mb-6 opacity-50 pointer-events-none transition-opacity duration-300" id="settingsPanel">
+                    <h2 class="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Mô hình AI (Backend)</h2>
+                    <div class="space-y-2">
+                        <label class="flex items-center p-3 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors bg-slate-800 border-primary-500/50">
+                            <input type="radio" name="aiModel" value="general" class="hidden" checked>
+                            <div class="flex-1">
+                                <div class="text-sm font-medium text-white flex items-center gap-2">
+                                    Real-ESRGAN
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">Tốt nhất cho phong cảnh, đồ vật, ảnh web.</div>
+                            </div>
+                            <div class="w-4 h-4 rounded-full border-2 border-primary-500 flex items-center justify-center model-radio">
+                                <div class="w-2 h-2 rounded-full bg-primary-500"></div>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-3 border border-slate-700 rounded-lg cursor-pointer hover:bg-slate-800 transition-colors relative overflow-hidden group">
+                            <input type="radio" name="aiModel" value="face" class="hidden">
+                            <div class="flex-1">
+                                <div class="text-sm font-medium text-white flex items-center gap-2">
+                                    CodeFormer (Face Restore)
+                                    <span class="text-[10px] bg-gradient-to-r from-purple-500 to-pink-500 px-1.5 py-0.5 rounded text-white font-bold">PRO</span>
+                                </div>
+                                <div class="text-xs text-slate-400 mt-0.5">Tái tạo chi tiết mắt, môi, da người cực chuẩn.</div>
+                            </div>
+                            <div class="w-4 h-4 rounded-full border-2 border-slate-600 flex items-center justify-center model-radio"></div>
+                        </label>
+                    </div>
+
+                    <!-- Scale Options -->
+                    <h2 class="text-sm font-semibold text-slate-300 mt-6 mb-3 uppercase tracking-wider">Độ phóng to (Scale)</h2>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button class="scale-btn active bg-primary-600 text-white py-2 rounded-lg text-sm font-medium border border-primary-500 transition-colors" data-scale="2">2x</button>
+                        <button class="scale-btn bg-slate-800 text-slate-300 py-2 rounded-lg text-sm font-medium border border-slate-700 hover:bg-slate-700 transition-colors" data-scale="4">4x</button>
+                        <button class="scale-btn relative bg-slate-800 text-slate-300 py-2 rounded-lg text-sm font-medium border border-slate-700 hover:bg-slate-700 transition-colors overflow-hidden group" data-scale="8">
+                            8x
+                            <div class="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-l-[20px] border-t-purple-500 border-l-transparent"></div>
+                            <svg class="absolute top-0.5 right-0.5 w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V3a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Advanced Sliders -->
+                    <h2 class="text-sm font-semibold text-slate-300 mt-6 mb-3 uppercase tracking-wider">Tinh chỉnh (Post-Processing)</h2>
+                    
+                    <!-- Denoise Slider -->
+                    <div class="mb-4">
+                        <div class="flex justify-between mb-2 items-center">
+                            <div>
+                                <label class="text-sm font-medium text-slate-300">Khử nhiễu (Denoise)</label>
+                                <p class="text-[10px] text-slate-500">Làm mịn da, khử hạt noise</p>
+                            </div>
+                            <span id="denoiseValue" class="text-xs font-semibold bg-slate-800 px-2 py-1 rounded text-slate-300">40%</span>
+                        </div>
+                        <input type="range" id="denoiseSlider" min="0" max="100" value="40">
+                    </div>
+
+                    <!-- Sharpen Slider -->
+                    <div>
+                        <div class="flex justify-between mb-2 items-center">
+                            <div>
+                                <label class="text-sm font-medium text-slate-300">Độ sắc nét (Amount)</label>
+                                <p class="text-[10px] text-slate-500">Thuật toán Unsharp Mask</p>
+                            </div>
+                            <span id="sharpenValue" class="text-xs font-semibold bg-slate-800 px-2 py-1 rounded text-primary-400">150%</span>
+                        </div>
+                        <!-- Thêm Live indicator để người dùng biết kéo là ăn luôn -->
+                        <div class="flex justify-between items-center mt-1">
+                            <input type="range" id="sharpenSlider" min="0" max="250" value="150" class="flex-1">
+                        </div>
+                        <p id="livePreviewHint" class="text-[10px] text-emerald-400 mt-1 hidden animate-pulse">● Live Preview Active: Kéo để xem thay đổi ngay</p>
+                    </div>
+                </div>
+                
+                <!-- Action Button -->
+                <button id="processBtn" disabled class="w-full bg-primary-600 hover:bg-primary-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 mt-auto">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Gửi đến AI Server (Simulate)
+                </button>
+            </div>
+        </aside>
+
+        <!-- Preview Area -->
+        <section class="flex-1 bg-dark-950 relative flex items-center justify-center p-8">
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center">
+                <div class="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <svg class="w-12 h-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <h3 class="text-lg font-medium text-slate-300">Chưa có hình ảnh</h3>
+                <p class="text-sm text-slate-500 mt-2 max-w-sm mx-auto">Vui lòng tải lên một bức ảnh ở cột bên trái để bắt đầu quá trình nâng cấp bằng AI.</p>
+            </div>
+
+            <!-- Loading State (Simulating Backend Processing) -->
+            <div id="loadingState" class="hidden text-center max-w-md w-full bg-dark-900 p-8 rounded-2xl border border-slate-800 shadow-2xl z-50">
+                <div class="relative w-20 h-20 mx-auto mb-6">
+                    <div class="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-primary-500 rounded-full border-t-transparent animate-spin"></div>
+                    <svg class="w-8 h-8 text-primary-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Đang xử lý trên Backend AI...</h3>
+                <p id="loadingStatus" class="text-sm text-primary-400 mb-6 font-mono">Đang khởi tạo model Real-ESRGAN...</p>
+                
+                <div class="w-full bg-slate-800 rounded-full h-2 mb-2 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-primary-500 to-purple-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-500">
+                    <span>0%</span>
+                    <span id="progressText">0%</span>
+                </div>
+            </div>
+
+            <!-- Result State (Comparison Slider) -->
+            <div id="resultState" class="hidden w-full h-full p-4 flex flex-col">
+                <!-- Toolbar above image -->
+                <div class="flex justify-between items-center mb-4 shrink-0 bg-dark-900 p-3 rounded-lg border border-slate-800">
+                    <div class="flex gap-4">
+                        <div class="text-sm text-slate-300">
+                            <span class="text-slate-500">Gốc:</span> <span id="origSize" class="font-mono">0x0</span>
+                        </div>
+                        <div class="text-sm text-primary-400 font-medium">
+                            <span class="text-slate-500">AI Upscaled:</span> <span id="newSize" class="font-mono">0x0</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                            100%
+                        </button>
+                        <button id="downloadBtn" class="bg-primary-600 hover:bg-primary-500 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 shadow-lg shadow-primary-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Tải xuống
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comparison Container -->
+                <div class="flex-1 relative border border-slate-800 rounded-lg overflow-hidden bg-black shadow-2xl" id="comparisonWrapper">
+                    <div class="comparison-container" id="comparisonContainer">
+                        <!-- Original Image (Background) -->
+                        <img id="origImg" class="comparison-img" src="" alt="Original">
+                        <span class="badge-before bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm border border-white/10">Bản gốc (Đã phóng to để so sánh)</span>
+                        
+                        <!-- Upscaled Image (Foreground/Overlay) -->
+                        <div class="comparison-overlay" id="overlay">
+                            <!-- Container cho hình ảnh đã upscale. Set max-width:none để ảnh ko bị co lại bởi width 50% của overlay -->
+                            <div style="width: 200%; height: 100%; position: relative;" id="overlayInner">
+                                <img id="upscaledImg" src="" alt="Upscaled" style="width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0;">
+                            </div>
+                            <span class="badge-after bg-primary-600/80 text-white text-xs px-2 py-1 rounded backdrop-blur-sm shadow-lg">AI Xử lý</span>
+                        </div>
+                        
+                        <!-- Slider Handle -->
+                        <div class="slider-line" id="sliderLine"></div>
+                        <div class="slider-handle" id="sliderHandle">
+                            <svg class="w-6 h-6 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Canvas ẩn dùng để xử lý ảnh (Không hiển thị) -->
+            <canvas id="processCanvas" class="hidden"></canvas>
+            <canvas id="baseUpscaledCanvas" class="hidden"></canvas>
+        </section>
+    </main>
+
+    <script>
+        // --- State Variables ---
+        let currentFile = null;
+        let originalImageObj = new Image();
+        let currentScale = 2;
+        let isPro = false;
+        
+        // Biến lưu trữ bản nháp sau khi upscale để phục vụ Live Preview Sharpening
+        let baseUpscaledImageData = null; 
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        let isLivePreviewReady = false;
+
+        // --- DOM Elements ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const removeFileBtn = document.getElementById('removeFileBtn');
+        const miniPreviewContainer = document.getElementById('miniPreviewContainer');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const processBtn = document.getElementById('processBtn');
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const resultState = document.getElementById('resultState');
+        const proBtn = document.getElementById('proBtn');
+
+        const scaleBtns = document.querySelectorAll('.scale-btn');
+        const modelRadios = document.querySelectorAll('input[name="aiModel"]');
+        
+        const denoiseSlider = document.getElementById('denoiseSlider');
+        const denoiseValue = document.getElementById('denoiseValue');
+        const sharpenSlider = document.getElementById('sharpenSlider');
+        const sharpenValue = document.getElementById('sharpenValue');
+        const livePreviewHint = document.getElementById('livePreviewHint');
+
+        // --- Event Listeners for UI ---
+
+        // Pro Button
+        proBtn.addEventListener('click', () => {
+            isPro = true;
+            proBtn.textContent = 'PRO Active';
+            proBtn.classList.remove('pro-glow');
+            proBtn.classList.add('bg-gradient-to-r', 'from-purple-500', 'to-pink-500');
+            alert('Tài khoản PRO đã kích hoạt! Đã mở khóa Model Face Restore và Scale 8x.');
+        });
+
+        // Sliders
+        denoiseSlider.addEventListener('input', (e) => {
+            denoiseValue.textContent = e.target.value + '%';
+        });
+
+        // LẮNG NGHE SỰ KIỆN KÉO THANH TRƯỢT SHARPEN ĐỂ LIVE PREVIEW
+        sharpenSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            sharpenValue.textContent = val + '%';
+            
+            // Nếu đã xử lý xong và có bản nháp, áp dụng filter ngay lập tức
+            if (isLivePreviewReady && baseUpscaledImageData) {
+                applyLiveSharpen(val);
+            }
+        });
+
+        // Scale Buttons Selection
+        scaleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const scale = parseInt(btn.dataset.scale);
+                if (scale === 8 && !isPro) {
+                    alert('Scale 8x yêu cầu tài khoản PRO!');
+                    return;
+                }
+                
+                scaleBtns.forEach(b => {
+                    b.classList.remove('active', 'bg-primary-600', 'text-white', 'border-primary-500');
+                    b.classList.add('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                });
+                
+                btn.classList.remove('bg-slate-800', 'text-slate-300', 'border-slate-700');
+                btn.classList.add('active', 'bg-primary-600', 'text-white', 'border-primary-500');
+                currentScale = scale;
+            });
+        });
+
+        // Model Selection Logic
+        modelRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'face' && !isPro) {
+                    e.target.checked = false;
+                    document.querySelector('input[value="general"]').checked = true;
+                    updateModelUI();
+                    alert('Model CodeFormer (Face Restore) yêu cầu tài khoản PRO!');
+                    return;
+                }
+                updateModelUI();
+            });
+        });
+
+        function updateModelUI() {
+            document.querySelectorAll('.model-radio').forEach(el => {
+                el.innerHTML = '';
+                el.classList.remove('border-primary-500');
+                el.classList.add('border-slate-600');
+                el.parentElement.classList.remove('bg-slate-800', 'border-primary-500/50');
+            });
+            const checkedRadio = document.querySelector('input[name="aiModel"]:checked');
+            const radioCircle = checkedRadio.parentElement.querySelector('.model-radio');
+            radioCircle.classList.remove('border-slate-600');
+            radioCircle.classList.add('border-primary-500');
+            radioCircle.innerHTML = '<div class="w-2 h-2 rounded-full bg-primary-500"></div>';
+            checkedRadio.parentElement.classList.add('bg-slate-800', 'border-primary-500/50');
+        }
+
+        // --- File Handling Logic ---
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-primary-500', 'bg-slate-800/50');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-primary-500', 'bg-slate-800/50');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary-500', 'bg-slate-800/50');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        removeFileBtn.addEventListener('click', () => {
+            currentFile = null;
+            fileInput.value = '';
+            dropZone.classList.remove('hidden');
+            fileInfo.classList.add('hidden');
+            settingsPanel.classList.add('opacity-50', 'pointer-events-none');
+            processBtn.disabled = true;
+            emptyState.classList.remove('hidden');
+            resultState.classList.add('hidden');
+            isLivePreviewReady = false;
+            livePreviewHint.classList.add('hidden');
+        });
+
+        function handleFile(file) {
+            if (!file.type.match('image.*')) {
+                alert('Vui lòng chọn file hình ảnh (JPG, PNG, WEBP)');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Kích thước file vượt quá 5MB');
+                return;
+            }
+
+            currentFile = file;
+            fileName.textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imgDataUrl = e.target.result;
+                originalImageObj.src = imgDataUrl;
+                
+                miniPreviewContainer.innerHTML = `<img src="${imgDataUrl}" class="w-full h-full object-cover">`;
+                
+                dropZone.classList.add('hidden');
+                fileInfo.classList.remove('hidden');
+                settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+                processBtn.disabled = false;
+                
+                // Cập nhật preview ban đầu
+                document.getElementById('origImg').src = imgDataUrl;
+                document.getElementById('upscaledImg').src = imgDataUrl;
+                
+                originalImageObj.onload = () => {
+                    document.getElementById('origSize').textContent = `${originalImageObj.width}x${originalImageObj.height}`;
+                    document.getElementById('newSize').textContent = `${originalImageObj.width * currentScale}x${originalImageObj.height * currentScale}`;
+                };
+                
+                emptyState.classList.remove('hidden');
+                resultState.classList.add('hidden');
+                isLivePreviewReady = false;
+                livePreviewHint.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Image Processing Algorithms (Client-side Fallback) ---
+        
+        // 1. Thuật toán Box Blur đơn giản (Nhanh hơn Gaussian) để làm mịn da
+        function applyFastBlur(imageData, w, h, strengthStr) {
+            const amount = parseInt(strengthStr) / 100; // 0.0 to 1.0
+            if (amount <= 0) return imageData;
+            
+            const px = imageData.data;
+            const resultData = new Uint8ClampedArray(px.length);
+            // Copy pixels first
+            resultData.set(px);
+
+            // Radius dựa trên amount (nhỏ thôi để ko mờ nhòe)
+            const passes = Math.ceil(amount * 2); 
+            
+            for(let p = 0; p < passes; p++) {
+                const temp = new Uint8ClampedArray(resultData);
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const idx = (y * w + x) * 4;
+                        
+                        // Lấy trung bình 9 pixel xung quanh
+                        let r = 0, g = 0, b = 0;
+                        for(let cy = -1; cy <= 1; cy++){
+                            let cidx = ((y + cy) * w + (x - 1)) * 4;
+                            for(let cx = -1; cx <= 1; cx++){
+                                r += temp[cidx];
+                                g += temp[cidx+1];
+                                b += temp[cidx+2];
+                                cidx += 4;
+                            }
+                        }
+                        
+                        // Trộn ảnh làm mờ vào ảnh gốc dựa trên strength
+                        const blend = amount * 0.5; // Không làm mờ quá 50%
+                        resultData[idx] = px[idx] * (1 - blend) + (r / 9) * blend;
+                        resultData[idx+1] = px[idx+1] * (1 - blend) + (g / 9) * blend;
+                        resultData[idx+2] = px[idx+2] * (1 - blend) + (b / 9) * blend;
+                    }
+                }
+            }
+            return new ImageData(resultData, w, h);
+        }
+
+        // 2. Thuật toán Unsharp Mask (Photoshop Standard) để làm nét
+        // Hàm này nhận vào mảng Pixel thô (ImageData) và trả về mảng Pixel đã xử lý
+        function processSharpenOnPixels(imageData, w, h, amountStr) {
+            const amount = parseInt(amountStr) / 100; // 0.0 to 2.5
+            if (amount <= 0) return imageData;
+            
+            const px = imageData.data;
+            const resultData = new Uint8ClampedArray(px.length);
+            
+            const boostAmount = amount * 1.5; 
+            
+            // Ma trận làm mờ Gaussian 5x5
+            const blurWeights = [
+                1,  4,  6,  4, 1,
+                4, 16, 24, 16, 4,
+                6, 24, 36, 24, 6,
+                4, 16, 24, 16, 4,
+                1,  4,  6,  4, 1
+            ];
+            const weightSum = 256;
+
+            for (let y = 2; y < h - 2; y++) {
+                for (let x = 2; x < w - 2; x++) {
+                    const idx = (y * w + x) * 4;
+                    
+                    let rBlur = 0, gBlur = 0, bBlur = 0;
+                    let k = 0;
+                    
+                    // Tạo mặt nạ mờ
+                    for(let cy = -2; cy <= 2; cy++){
+                        let cidx = ((y + cy) * w + (x - 2)) * 4;
+                        for(let cx = -2; cx <= 2; cx++){
+                            const weight = blurWeights[k++];
+                            rBlur += px[cidx] * weight;
+                            gBlur += px[cidx+1] * weight;
+                            bBlur += px[cidx+2] * weight;
+                            cidx += 4;
+                        }
+                    }
+                    
+                    rBlur /= weightSum;
+                    gBlur /= weightSum;
+                    bBlur /= weightSum;
+                    
+                    // Unsharp Mask formula: Original + Amount * (Original - Blurred)
+                    resultData[idx] = Math.min(255, Math.max(0, px[idx] + boostAmount * (px[idx] - rBlur)));
+                    resultData[idx+1] = Math.min(255, Math.max(0, px[idx+1] + boostAmount * (px[idx+1] - gBlur)));
+                    resultData[idx+2] = Math.min(255, Math.max(0, px[idx+2] + boostAmount * (px[idx+2] - bBlur)));
+                    resultData[idx+3] = px[idx+3];
+                }
+            }
+            
+            // Xử lý viền (giữ nguyên gốc)
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    if (y < 2 || y >= h - 2 || x < 2 || x >= w - 2) {
+                        const idx = (y * w + x) * 4;
+                        resultData[idx] = px[idx];
+                        resultData[idx+1] = px[idx+1];
+                        resultData[idx+2] = px[idx+2];
+                        resultData[idx+3] = px[idx+3];
+                    }
+                }
+            }
+            
+            return new ImageData(resultData, w, h);
+        }
+
+        // --- Processing & Simulation Logic ---
+
+        // Hàm này chạy khi kéo thanh trượt Sharpen (Sau khi đã có base image)
+        function applyLiveSharpen(sharpenAmount) {
+            if (!baseUpscaledImageData) return;
+            
+            // 1. Lấy dữ liệu nháp ban đầu (Đã phóng to + Denoise, chưa có Sharpen)
+            // Cần copy lại array để không làm hỏng bản gốc
+            const draftImageData = new ImageData(
+                new Uint8ClampedArray(baseUpscaledImageData.data),
+                canvasWidth, 
+                canvasHeight
+            );
+            
+            // 2. Chạy hàm Sharpen trên bản nháp
+            const finalImageData = processSharpenOnPixels(draftImageData, canvasWidth, canvasHeight, sharpenAmount);
+            
+            // 3. Đưa kết quả lên Canvas 
+            const canvas = document.getElementById('processCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.putImageData(finalImageData, 0, 0);
+            
+            // 4. Cập nhật ảnh hiển thị trong Slider ngay lập tức
+            document.getElementById('upscaledImg').src = canvas.toDataURL('image/jpeg', 0.95);
+        }
+
+        processBtn.addEventListener('click', async () => {
+            if (!currentFile) return;
+
+            // Thu thập thông số như một API call thật
+            const payload = {
+                scaleFactor: currentScale,
+                modelType: document.querySelector('input[name="aiModel"]:checked').value,
+                denoise: denoiseSlider.value,
+                sharpen: sharpenSlider.value
+            };
+
+            // UI Changes for Loading
+            emptyState.classList.add('hidden');
+            resultState.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            processBtn.disabled = true;
+            settingsPanel.classList.add('opacity-50', 'pointer-events-none');
+            livePreviewHint.classList.add('hidden');
+            isLivePreviewReady = false;
+
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const loadingStatus = document.getElementById('loadingStatus');
+
+            // Simulate Backend Process (Steps)
+            const steps = [
+                { progress: 10, text: 'Đang tải ảnh lên Server...' },
+                { progress: 30, text: `Khởi tạo Model AI (${payload.modelType === 'face' ? 'CodeFormer' : 'Real-ESRGAN'})...` },
+                { progress: 60, text: `Đang nội suy điểm ảnh lên ${payload.scaleFactor}x (Deep Learning)...` },
+                { progress: 85, text: `Áp dụng bộ lọc khử nhiễu (${payload.denoise}%)...` },
+                { progress: 95, text: 'Tối ưu hóa cạnh và xuất file...' }
+            ];
+
+            let currentStep = 0;
+            
+            // Fake timer for progress bar
+            const interval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    progressBar.style.width = steps[currentStep].progress + '%';
+                    progressText.textContent = steps[currentStep].progress + '%';
+                    loadingStatus.textContent = steps[currentStep].text;
+                    currentStep++;
+                }
+            }, 1200);
+
+            // Wait for fake backend to finish (approx 6-7 seconds)
+            setTimeout(async () => {
+                clearInterval(interval);
+                progressBar.style.width = '100%';
+                progressText.textContent = '100%';
+                loadingStatus.textContent = 'Hoàn tất!';
+                
+                // Thực thi xử lý ảnh trên Client để có ảnh Demo
+                await simulateUpscaleProcess(payload);
+
+                // Show Results
+                loadingState.classList.add('hidden');
+                resultState.classList.remove('hidden');
+                processBtn.disabled = false;
+                settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+                
+                // Bật tính năng Live Preview cho Sharpen
+                isLivePreviewReady = true;
+                livePreviewHint.classList.remove('hidden');
+                
+                document.getElementById('newSize').textContent = `${originalImageObj.width * payload.scaleFactor}x${originalImageObj.height * payload.scaleFactor}`;
+                
+                // Reset slider position
+                const overlay = document.getElementById('overlay');
+                const sliderLine = document.getElementById('sliderLine');
+                const sliderHandle = document.getElementById('sliderHandle');
+                const innerContainer = document.getElementById('overlayInner');
+                
+                overlay.style.width = '50%';
+                innerContainer.style.width = '200%';
+                sliderLine.style.left = '50%';
+                sliderHandle.style.left = '50%';
+
+            }, 7000);
+        });
+
+        // Hàm xử lý ảnh (Chạy ngầm trên Canvas)
+        async function simulateUpscaleProcess(payload) {
+            return new Promise((resolve) => {
+                const canvas = document.getElementById('processCanvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                
+                // 1. Phóng to ảnh cơ bản
+                canvasWidth = originalImageObj.width * payload.scaleFactor;
+                canvasHeight = originalImageObj.height * payload.scaleFactor;
+                canvas.width = canvasWidth;
+                canvas.height = canvasHeight;
+                
+                // Smooth scaling
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(originalImageObj, 0, 0, canvasWidth, canvasHeight);
+
+                // Lấy Pixel Data
+                let imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+                
+                // 2. Chạy Blur (Denoise)
+                if(payload.denoise > 0) {
+                    imageData = applyFastBlur(imageData, canvasWidth, canvasHeight, payload.denoise);
+                }
+
+                // *** QUAN TRỌNG: LƯU LẠI BẢN NHÁP (Base Image) ***
+                // Bản nháp này đã được Scale và Denoise, nhưng CHƯA SHARPEN.
+                // Chúng ta lưu lại để khi người dùng kéo thanh Sharpen, không phải chạy lại Blur/Scale.
+                baseUpscaledImageData = new ImageData(
+                    new Uint8ClampedArray(imageData.data),
+                    canvasWidth,
+                    canvasHeight
+                );
+
+                // 3. Chạy Sharpen lần đầu tiên dựa trên thông số lúc ấn nút Gửi
+                let finalImageData = processSharpenOnPixels(imageData, canvasWidth, canvasHeight, payload.sharpen);
+                
+                // 4. Vẽ kết quả cuối ra Canvas và gán vào thẻ <img>
+                ctx.putImageData(finalImageData, 0, 0);
+                document.getElementById('upscaledImg').src = canvas.toDataURL('image/jpeg', 0.95);
+                
+                resolve();
+            });
+        }
+
+        // --- Comparison Slider Logic ---
+        const comparisonWrapper = document.getElementById('comparisonWrapper');
+        const overlay = document.getElementById('overlay');
+        const sliderLine = document.getElementById('sliderLine');
+        const sliderHandle = document.getElementById('sliderHandle');
+        const innerContainer = document.getElementById('overlayInner');
+        let isSliding = false;
+
+        function updateSliderPosition(e) {
+            if (!isSliding) return;
+            
+            const rect = comparisonWrapper.getBoundingClientRect();
+            // Lấy vị trí X chuột tương đối so với container
+            let x = e.clientX || (e.touches && e.touches[0].clientX);
+            if(x === undefined) return;
+            
+            let pos = x - rect.left;
+            
+            // Giới hạn trong khoảng 0 - width
+            pos = Math.max(0, Math.min(pos, rect.width));
+            
+            // Tính toán % width
+            const percent = (pos / rect.width) * 100;
+            
+            // Cập nhật UI
+            overlay.style.width = `${percent}%`;
+            // Cực kỳ quan trọng: Inner width = 100 / percent * 100
+            // Ví dụ overlay 50% -> inner 200%. Overlay 25% -> inner 400%
+            // Điều này giữ cho ảnh bên trong không bị scale nhỏ lại khi overlay co hẹp
+            if(percent > 0) {
+                innerContainer.style.width = `${10000 / percent}%`;
+            }
+            
+            sliderLine.style.left = `${percent}%`;
+            sliderHandle.style.left = `${percent}%`;
+        }
+
+        // Mouse Events
+        comparisonWrapper.addEventListener('mousedown', (e) => {
+            isSliding = true;
+            updateSliderPosition(e);
+        });
+        window.addEventListener('mouseup', () => { isSliding = false; });
+        window.addEventListener('mousemove', updateSliderPosition);
+
+        // Touch Events (Mobile support)
+        comparisonWrapper.addEventListener('touchstart', (e) => {
+            isSliding = true;
+            updateSliderPosition(e);
+        }, {passive: true});
+        window.addEventListener('touchend', () => { isSliding = false; });
+        window.addEventListener('touchmove', (e) => {
+            if(isSliding) {
+                // e.preventDefault(); // Uncomment if you want to block scrolling while sliding
+                updateSliderPosition(e);
+            }
+        }, {passive: false});
+
+    </script>
+</body>
+</html>
