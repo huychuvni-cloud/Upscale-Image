@@ -255,15 +255,24 @@
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
                         <div class="mb-4">
                             <label class="text-sm font-medium text-slate-300 block mb-2">Bộ lọc màu (Color Filter)</label>
-                            <select id="colorFilter" class="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-colors">
+                            <select id="colorFilter" class="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-colors mb-3">
                                 <option value="none" selected>Gốc (Bảo toàn màu sắc)</option>
-                                <option value="contrast(115%) saturate(120%)">Sống động (Vivid)</option>
-                                <option value="contrast(110%) sepia(30%) hue-rotate(-15deg)">Ấm áp (Warm/Sunset)</option>
-                                <option value="contrast(110%) saturate(110%) hue-rotate(15deg)">Lạnh (Cool/Cinematic)</option>
-                                <option value="sepia(80%) contrast(110%)">Cổ điển (Vintage/Sepia)</option>
-                                <option value="grayscale(100%) contrast(120%)">Đen trắng (B&W)</option>
-                                <option value="saturate(150%) contrast(110%)">Rực rỡ (Pop)</option>
+                                <option value="vivid">Sống động (Vivid)</option>
+                                <option value="warm">Ấm áp (Warm/Sunset)</option>
+                                <option value="cool">Lạnh (Cool/Cinematic)</option>
+                                <option value="vintage">Cổ điển (Vintage/Sepia)</option>
+                                <option value="bw">Đen trắng (B&W)</option>
+                                <option value="pop">Rực rỡ (Pop)</option>
                             </select>
+                            
+                            <!-- Slider Cường độ Filter -->
+                            <div class="flex justify-between mb-2 items-center">
+                                <div>
+                                    <label class="text-[12px] font-medium text-slate-400">Cường độ Filter</label>
+                                </div>
+                                <span id="filterIntensityValue" class="text-[10px] font-semibold bg-slate-800 px-2 py-1 rounded text-blue-400">100%</span>
+                            </div>
+                            <input type="range" id="filterIntensitySlider" min="0" max="100" value="100" class="flex-1 w-full">
                         </div>
                         
                         <div>
@@ -456,10 +465,26 @@
         const sharpenSlider = document.getElementById('sharpenSlider');
         const sharpenValue = document.getElementById('sharpenValue');
         const colorFilter = document.getElementById('colorFilter');
+        const filterIntensitySlider = document.getElementById('filterIntensitySlider');
+        const filterIntensityValue = document.getElementById('filterIntensityValue');
         const contrastSlider = document.getElementById('contrastSlider');
         const contrastValue = document.getElementById('contrastValue');
         const upscaledImgElement = document.getElementById('upscaledImg');
         const sharpenMatrix = document.getElementById('sharpen-matrix');
+
+        // --- HÀM TẠO CHUỖI BỘ LỌC DỰA TRÊN CƯỜNG ĐỘ ---
+        function getColorFilterString(key, intensityValue) {
+            const i = intensityValue / 100;
+            switch(key) {
+                case 'vivid': return `contrast(${100 + 15 * i}%) saturate(${100 + 20 * i}%)`;
+                case 'warm': return `contrast(${100 + 10 * i}%) sepia(${30 * i}%) hue-rotate(${-15 * i}deg)`;
+                case 'cool': return `contrast(${100 + 10 * i}%) saturate(${100 + 10 * i}%) hue-rotate(${15 * i}deg)`;
+                case 'vintage': return `sepia(${80 * i}%) contrast(${100 + 10 * i}%)`;
+                case 'bw': return `grayscale(${100 * i}%) contrast(${100 + 20 * i}%)`;
+                case 'pop': return `saturate(${100 + 50 * i}%) contrast(${100 + 10 * i}%)`;
+                default: return '';
+            }
+        }
 
         // --- CẬP NHẬT NHÃN THANH TRƯỢT ---
         function updateSliderLabels() {
@@ -515,6 +540,8 @@
                 
                 // Reset Post-processing filters
                 colorFilter.value = 'none';
+                filterIntensitySlider.value = 100;
+                filterIntensityValue.textContent = '100%';
                 contrastSlider.value = 100;
                 contrastValue.textContent = '100%';
                 smoothSlider.value = 0;
@@ -538,15 +565,19 @@
             // Cập nhật bộ lọc CSS
             const smooth = (parseInt(smoothSlider.value) / 100) * 1.5; 
             const contrast = contrastSlider.value;
-            const selectedColorFilter = colorFilter.value;
+            const selectedColorFilterKey = colorFilter.value;
+            const filterIntensity = parseInt(filterIntensitySlider.value);
             
             let filterString = `blur(${smooth}px) url(#svg-sharpen-filter) contrast(${contrast}%)`;
-            if (selectedColorFilter !== "none") filterString += ` ${selectedColorFilter}`;
+            
+            const colorFilterStr = getColorFilterString(selectedColorFilterKey, filterIntensity);
+            if (colorFilterStr !== "") filterString += ` ${colorFilterStr}`;
             
             upscaledImgElement.style.filter = filterString;
         }
 
         colorFilter.addEventListener('change', updateFilters);
+        filterIntensitySlider.addEventListener('input', (e) => { filterIntensityValue.textContent = e.target.value + '%'; updateFilters(); });
         contrastSlider.addEventListener('input', (e) => { contrastValue.textContent = e.target.value + '%'; updateFilters(); });
 
         // --- CƠ CHẾ BẢO VỆ CHỐNG TRÀN BỘ NHỚ KHI CHẠY LOCAL ---
@@ -860,7 +891,8 @@
                     const smoothAmount = parseInt(smoothSlider.value) / 100;
                     const amount = parseInt(sharpenSlider.value) / 100;
                     const contrast = parseInt(contrastSlider.value);
-                    const selectedColorFilter = colorFilter.value;
+                    const selectedColorFilterKey = colorFilter.value;
+                    const filterIntensity = parseInt(filterIntensitySlider.value);
                     
                     const baseCanvas = document.createElement('canvas');
                     baseCanvas.width = finalWidth; baseCanvas.height = finalHeight;
@@ -900,14 +932,15 @@
                     }
 
                     // Áp dụng màu và contrast cuối cùng
-                    if (contrast !== 100 || selectedColorFilter !== "none") {
+                    const colorFilterStr = getColorFilterString(selectedColorFilterKey, filterIntensity);
+                    if (contrast !== 100 || colorFilterStr !== "") {
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = finalWidth; tempCanvas.height = finalHeight;
                         tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
 
                         ctx.clearRect(0, 0, finalWidth, finalHeight);
                         let finalFilter = `contrast(${contrast}%)`;
-                        if (selectedColorFilter !== "none") finalFilter += ` ${selectedColorFilter}`;
+                        if (colorFilterStr !== "") finalFilter += ` ${colorFilterStr}`;
                         ctx.filter = finalFilter;
                         
                         ctx.drawImage(tempCanvas, 0, 0);
