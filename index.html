@@ -97,25 +97,66 @@
         </button>
     </div>
 
-    <!-- GPU Accelerated SVG Filters -->
-    <svg style="display: none;">
-        <defs>
-            <filter id="svg-sharpen-filter">
-                <feConvolveMatrix id="sharpen-matrix" order="3 3" preserveAlpha="true" divisor="1" bias="0" 
-                                  kernelMatrix="0 0 0 0 1 0 0 0 0" />
-            </filter>
-        </defs>
-    </svg>
+    <!-- Guide Modal (Popup Hướng Dẫn) -->
+    <div id="guideModal" class="fixed inset-0 bg-black/80 z-[2000] hidden flex-col items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-dark-900 border border-slate-700 rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden relative">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span class="text-xl">📱</span> Hướng dẫn thao tác
+                </h2>
+                <button id="closeGuideBtn" class="text-slate-400 hover:text-white transition-colors p-1">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto no-scrollbar text-slate-300 text-sm leading-relaxed space-y-6">
+                <!-- Bước 1 -->
+                <div>
+                    <h3 class="font-bold text-white text-base mb-2 flex items-center gap-2"><span class="bg-purple-600/30 text-purple-400 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> Lấy API Key miễn phí</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Chạm vào link <strong class="text-purple-400">Google AI Studio</strong> dưới ô nhập mã ở cột trái.</li>
+                        <li>Đăng nhập, bấm nút xanh <strong class="text-white">Create API key</strong> và sao chép (Copy) mã đó.</li>
+                    </ul>
+                </div>
+
+                <!-- Bước 2 -->
+                <div>
+                    <h3 class="font-bold text-white text-base mb-2 flex items-center gap-2"><span class="bg-purple-600/30 text-purple-400 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> Dán mã & Tải ảnh</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Quay lại ứng dụng, <strong class="text-purple-300">nhấn giữ</strong> (trên điện thoại) vào ô nhập Key và chọn <strong class="text-white">Dán (Paste)</strong>.</li>
+                        <li>Tải bức ảnh của bạn lên và chọn tỷ lệ phóng to (Upscale 2x, 4x, 8x).</li>
+                    </ul>
+                </div>
+
+                <!-- Bước 3 -->
+                <div>
+                    <h3 class="font-bold text-white text-base mb-2 flex items-center gap-2"><span class="bg-purple-600/30 text-purple-400 w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> Xử lý & Lưu ảnh</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Bấm nút <strong class="text-white">Xử lý AI & Phóng to</strong> ở dưới cùng cột trái.</li>
+                        <li>Đợi vài giây để AI chạy, kết quả sẽ hiện ra cực kỳ sắc nét.</li>
+                        <li>Bấm <strong class="text-white">Lưu ảnh</strong> để tải tác phẩm về máy!</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-slate-800 bg-slate-900/50">
+                <button id="closeGuideBtnBottom" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 rounded-xl transition-all">Đã hiểu, Bắt đầu ngay!</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Top Navigation -->
     <header class="bg-dark-900 border-b border-slate-800 h-16 flex items-center justify-between px-6 shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded bg-gradient-to-br from-gemini-from to-gemini-to flex items-center justify-center font-bold text-white shadow-lg">✨</div>
             <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gemini-from to-gemini-to">Gemini Upscaler Pro</h1>
-            <span id="aiStatusBadge" class="ml-2 text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700">Powered by Nano Banana</span>
+            <span id="aiStatusBadge" class="ml-2 text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-700 hidden sm:inline-block">Powered by Nano Banana</span>
         </div>
-        <div class="flex items-center gap-4">
-            <button class="text-slate-400 hover:text-white transition-colors text-sm">Hướng dẫn</button>
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button id="guideBtn" class="text-slate-300 hover:text-white transition-colors text-sm flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="hidden sm:inline-block">Hướng dẫn</span>
+            </button>
             <button id="proBtn" class="pro-glow bg-gradient-to-r from-gemini-from to-gemini-to hover:opacity-90 text-white px-4 py-1.5 rounded-full text-sm font-semibold transition-all shadow-lg">Get Pro</button>
         </div>
     </header>
@@ -124,9 +165,16 @@
     <main class="flex-1 flex overflow-hidden">
         
         <!-- Sidebar Settings -->
-        <aside class="w-80 bg-dark-900 border-r border-slate-800 flex flex-col shrink-0">
-            <div class="p-5 flex-1 overflow-y-auto no-scrollbar flex flex-col">
+        <aside class="w-80 bg-dark-900 border-r border-slate-800 flex flex-col shrink-0 overflow-y-auto">
+            <div class="p-5 flex-1 flex flex-col min-h-max">
                 
+                <!-- API Key Input cho người dùng Mobile/Cá nhân -->
+                <div class="mb-6">
+                    <label class="text-sm font-semibold text-slate-300 mb-2 block uppercase tracking-wider">Xác thực API</label>
+                    <input type="password" id="apiKeyValue" placeholder="Nhập Gemini API Key của bạn..." class="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5 outline-none transition-colors shadow-inner" autocomplete="off">
+                    <p class="text-[10px] text-slate-500 mt-2">Lấy key miễn phí tại <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-purple-400 hover:underline">Google AI Studio</a></p>
+                </div>
+
                 <!-- Upload Area -->
                 <div class="mb-6">
                     <h2 class="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Hình ảnh đầu vào</h2>
@@ -195,7 +243,7 @@
                         </div>
                     </div>
 
-                    <!-- NEW: Live Post-Processing Filters -->
+                    <!-- Live Post-Processing Filters -->
                     <h2 class="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Tinh chỉnh Hậu kỳ (Live)</h2>
                     <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
                         <div class="mb-4">
@@ -263,7 +311,7 @@
             <div id="resultState" class="hidden w-full h-full flex flex-col pb-4">
                 <div class="flex justify-between items-center mb-4 shrink-0 bg-dark-900 p-3 rounded-lg border border-slate-800">
                     <div class="flex gap-4">
-                        <div class="text-sm text-slate-300">
+                        <div class="text-sm text-slate-300 hidden sm:block">
                             <span class="text-slate-500">Gốc:</span> <span id="origSize" class="font-mono text-white">0x0</span>
                         </div>
                         <div class="text-sm text-purple-400 font-medium bg-purple-900/30 px-2 py-0.5 rounded border border-purple-500/30 flex items-center gap-1">
@@ -289,12 +337,12 @@
                         
                         <button id="downloadBtn" class="bg-gradient-to-r from-gemini-from to-gemini-to hover:opacity-90 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-2 shadow-lg h-[34px]">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span>Lưu ảnh</span>
+                            <span class="hidden sm:inline-block">Lưu ảnh</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="flex-1 relative border border-slate-800 rounded-lg overflow-hidden bg-black shadow-2xl" id="comparisonWrapper">
+                <div class="flex-1 relative border border-slate-800 rounded-lg overflow-hidden bg-black shadow-2xl w-full" id="comparisonWrapper">
                     <div class="comparison-container mx-auto" id="comparisonContainer">
                         <img id="origImg" class="comparison-img" src="" alt="Original">
                         <span class="badge-before bg-slate-900/90 text-slate-200 text-xs font-semibold px-2 py-1 rounded backdrop-blur border border-slate-600">👈 Gốc</span>
@@ -320,7 +368,7 @@
 
     <script>
         // --- CẤU HÌNH API GEMINI ---
-        const apiKey = ""; // API key được hệ thống môi trường tự động cấp phát
+        const apiKey = ""; // Mặc định rỗng. Dùng input của người dùng ở UI
         const modelName = "gemini-2.5-flash-image-preview";
 
         // --- TOAST NOTIFICATION SYSTEM ---
@@ -348,6 +396,22 @@
         const ui_sliderLine = document.getElementById('sliderLine');
         const ui_sliderHandle = document.getElementById('sliderHandle');
         const ui_innerContainer = document.getElementById('overlayInner');
+
+        // --- GUIDE MODAL LOGIC (HƯỚNG DẪN MOBILE) ---
+        const guideBtn = document.getElementById('guideBtn');
+        const guideModal = document.getElementById('guideModal');
+        const closeGuideBtn = document.getElementById('closeGuideBtn');
+        const closeGuideBtnBottom = document.getElementById('closeGuideBtnBottom');
+
+        function openGuide() { guideModal.classList.remove('hidden'); guideModal.classList.add('flex'); }
+        function closeGuide() { guideModal.classList.add('hidden'); guideModal.classList.remove('flex'); }
+
+        guideBtn.addEventListener('click', openGuide);
+        closeGuideBtn.addEventListener('click', closeGuide);
+        closeGuideBtnBottom.addEventListener('click', closeGuide);
+        guideModal.addEventListener('click', (e) => {
+            if(e.target === guideModal) closeGuide();
+        });
 
         // --- KHỞI TẠO BIẾN DỮ LIỆU ---
         let currentFile = null;
@@ -435,7 +499,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 const imgDataUrl = e.target.result;
-                base64ImageInput = imgDataUrl.split(',')[1]; // Tách lấy chuỗi base64 cho API
+                base64ImageInput = imgDataUrl.split(',')[1]; // Lấy base64 bỏ header
                 originalImageObj.src = imgDataUrl;
                 miniPreviewContainer.innerHTML = `<img src="${imgDataUrl}" class="w-full h-full object-cover">`;
                 
@@ -470,9 +534,7 @@
             const selectedColorFilter = colorFilter.value;
             
             let filterString = `contrast(${contrast}%)`;
-            if (selectedColorFilter !== "none") {
-                filterString += ` ${selectedColorFilter}`;
-            }
+            if (selectedColorFilter !== "none") filterString += ` ${selectedColorFilter}`;
             
             upscaledImgElement.style.filter = filterString;
         }
@@ -480,21 +542,20 @@
         colorFilter.addEventListener('change', updateFilters);
         contrastSlider.addEventListener('input', (e) => { contrastValue.textContent = e.target.value + '%'; updateFilters(); });
 
-        // --- GỌI API GEMINI (TÍCH HỢP EXPONENTIAL BACKOFF) ---
+        // --- GỌI API GEMINI VỚI RETRY ---
         async function fetchGeminiWithRetry(promptText, retries = 5) {
+            // Lấy API key từ input người dùng
+            const userApiKey = document.getElementById('apiKeyValue').value.trim();
+            const currentApiKey = apiKey || userApiKey;
+            
+            if (!currentApiKey) throw new Error("Vui lòng nhập Gemini API Key để sử dụng.");
+
             const delays = [1000, 2000, 4000, 8000, 16000];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${currentApiKey}`;
             
             const payload = {
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        { inlineData: { mimeType: mimeTypeInput, data: base64ImageInput } }
-                    ]
-                }],
-                generationConfig: {
-                    responseModalities: ["IMAGE"]
-                }
+                contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: mimeTypeInput, data: base64ImageInput } }] }],
+                generationConfig: { responseModalities: ["IMAGE"] }
             };
 
             for (let i = 0; i < retries; i++) {
@@ -506,16 +567,18 @@
                     });
                     
                     if (!response.ok) {
+                        if (response.status === 403 || response.status === 400) {
+                             throw new Error(`Lỗi xác thực (${response.status}): Vui lòng kiểm tra lại API Key.`);
+                        }
                         throw new Error(`Lỗi máy chủ HTTP: ${response.status}`);
                     }
                     
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
-                    
                     return data;
                 } catch (err) {
                     console.warn(`Lần thử thứ ${i+1} thất bại:`, err);
-                    if (i === retries - 1) throw err;
+                    if (err.message.includes('Lỗi xác thực') || i === retries - 1) throw err;
                     await new Promise(resolve => setTimeout(resolve, delays[i]));
                 }
             }
@@ -526,11 +589,18 @@
             hideToast();
             if (!currentFile || !base64ImageInput) return;
 
+            const userApiKey = document.getElementById('apiKeyValue').value.trim();
+            if (!apiKey && !userApiKey) {
+                showToast('Bạn chưa nhập Gemini API Key. Vui lòng nhập key ở cột bên trái để chạy AI.', true);
+                openGuide(); // Tự động mở hướng dẫn nếu chưa nhập Key
+                return;
+            }
+
             const scaleFactor = document.querySelector('input[name="scaleFactor"]:checked').value;
             const smoothLevel = smoothSlider.value;
             const sharpenLevel = sharpenSlider.value;
 
-            // PROMPT NÂNG CẤP: KHÓA CỨNG MÀU SẮC, CHỈ LÀM NÉT
+            // Mệnh lệnh cứng cho AI: Khóa màu sắc, chỉ làm nét
             const magicPrompt = `You are a highly technical image upscaling and noise reduction AI. Your ONLY job is to improve image clarity, resolution, and sharpness.
             
             INSTRUCTIONS:
@@ -557,46 +627,35 @@
                 const generatedBase64 = responseData.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
                 const generatedMime = responseData.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.mimeType || "image/png";
 
-                if (!generatedBase64) {
-                    throw new Error("Gemini không trả về dữ liệu hình ảnh. Có thể prompt bị chặn bởi hệ thống an toàn.");
-                }
+                if (!generatedBase64) throw new Error("Gemini không trả về dữ liệu hình ảnh.");
 
                 const geminiResultSrc = `data:${generatedMime};base64,${generatedBase64}`;
-                
                 const geminiImg = new Image();
                 geminiImg.src = geminiResultSrc;
                 await new Promise(resolve => { geminiImg.onload = resolve; });
 
                 document.getElementById('loadingStatus').textContent = 'Đang nội suy điểm ảnh tỷ lệ thực...';
-                
-                // Nghỉ 1 chút để trình duyệt kịp cập nhật chữ UI (tránh bị đơ màn hình)
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 100)); // Nhường luồng cho UI render
 
-                // NỘI SUY PHẦN CỨNG LÊN KÍCH THƯỚC CHUẨN (Scale 2x, 4x, 8x)
+                // CƠ CHẾ BẢO VỆ CHỐNG TRÀN BỘ NHỚ CANVAS KHI UPSCALE 8X
                 let targetWidth = originalImageObj.width * parseInt(scaleFactor);
                 let targetHeight = originalImageObj.height * parseInt(scaleFactor);
                 let displayScale = scaleFactor + 'x';
 
-                // --- CƠ CHẾ BẢO VỆ CHỐNG TREO TRÌNH DUYỆT KHI UPSCALE 8X ---
-                // Trình duyệt web sẽ crash nếu Canvas vượt quá khoảng 40-50 Megapixels
-                const MAX_SAFE_PIXELS = 36000000; // Giới hạn an toàn ~6000x6000 pixels
-                
+                const MAX_SAFE_PIXELS = 36000000; // Giới hạn 36 Megapixels
                 if (targetWidth * targetHeight > MAX_SAFE_PIXELS) {
                     const safeRatio = Math.sqrt(MAX_SAFE_PIXELS / (originalImageObj.width * originalImageObj.height));
                     targetWidth = Math.floor(originalImageObj.width * safeRatio);
                     targetHeight = Math.floor(originalImageObj.height * safeRatio);
-                    displayScale = safeRatio.toFixed(1) + 'x (Max)'; // Hiển thị tỷ lệ scale thực tế cao nhất có thể
+                    displayScale = safeRatio.toFixed(1) + 'x (Max)'; 
                 }
 
                 const canvas = document.createElement('canvas');
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
+                canvas.width = targetWidth; canvas.height = targetHeight;
                 const ctx = canvas.getContext('2d');
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(geminiImg, 0, 0, targetWidth, targetHeight);
 
-                // Dùng toBlob thay vì toDataURL nếu có thể, nhưng để đồng bộ tôi giảm chất lượng nén JPEG xuống 0.92 để tăng tốc độ chuỗi base64
                 const finalUpscaledSrc = canvas.toDataURL('image/jpeg', 0.92);
 
                 upscaledImageObj.src = finalUpscaledSrc;
@@ -615,13 +674,13 @@
                     settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
                     isLivePreviewReady = true;
                     
-                    updateFilters(); // Áp dụng lại filter nếu có
+                    updateFilters(); 
                     fitScale = calculateFitScale();
                     updateZoom(fitScale);
                     resetSliderPosition();
                     
                     if (displayScale.includes('Max')) {
-                        showToast(`Thành công! Đã tự động giới hạn ở độ phân giải an toàn cao nhất (${finalWidth}x${finalHeight}) để tránh treo máy.`);
+                        showToast(`Thành công! Đã giới hạn an toàn ở độ phân giải ${finalWidth}x${finalHeight} để tránh treo máy.`);
                     } else {
                         showToast(`Xử lý thành công! AI đã bảo toàn màu sắc gốc.`);
                     }
@@ -630,7 +689,7 @@
             } catch (error) {
                 console.error("Lỗi API Gemini:", error);
                 document.getElementById('loadingStatus').textContent = 'Có lỗi xảy ra: ' + error.message;
-                showToast('Lỗi khi gọi API Gemini: ' + error.message, true);
+                showToast(error.message, true);
                 
                 setTimeout(() => {
                     loadingState.classList.add('hidden');
@@ -756,7 +815,7 @@
             if(!isLivePreviewReady || finalWidth === 0) return;
             
             const originalText = downloadBtn.innerHTML;
-            downloadBtn.innerHTML = `<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang xuất...`;
+            downloadBtn.innerHTML = `<svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="hidden sm:inline-block">Đang xuất...</span>`;
             downloadBtn.disabled = true;
 
             setTimeout(() => {
@@ -765,14 +824,11 @@
                     canvas.width = finalWidth; canvas.height = finalHeight;
                     const ctx = canvas.getContext('2d');
                     
-                    // Áp dụng chính xác Filter Đang chọn vào file tải xuống
                     const contrast = contrastSlider.value;
                     const selectedColorFilter = colorFilter.value;
                     
                     let filterString = `contrast(${contrast}%)`;
-                    if (selectedColorFilter !== "none") {
-                        filterString += ` ${selectedColorFilter}`;
-                    }
+                    if (selectedColorFilter !== "none") filterString += ` ${selectedColorFilter}`;
                     
                     ctx.filter = filterString;
                     ctx.drawImage(upscaledImageObj, 0, 0, finalWidth, finalHeight);
@@ -792,7 +848,7 @@
                             downloadBtn.innerHTML = originalText; 
                             downloadBtn.disabled = false; 
                         }, 1000);
-                        showToast('Đã tải ảnh thành công!');
+                        showToast('Đã lưu ảnh thành công!');
                     }, 'image/jpeg', 0.95);
 
                 } catch (err) {
